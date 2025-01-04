@@ -27,37 +27,49 @@
         padding: 10px 0;
         border-bottom: 1px solid #eee;
     }
+
+    .chart-title {
+        text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
 </style>
 
 <div class="container mt-4">
     <h3 style="color:green">Dashboard</h3>
 
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="dashboard-card bg-success text-white text-center">
                 <h5>Total Inflows</h5>
                 <h2>@totalIncome</h2>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="dashboard-card bg-danger text-white text-center">
                 <h5>Total Outflows</h5>
                 <h2>@totalExpense</h2>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="dashboard-card bg-warning text-white text-center">
                 <h5>Total Debt</h5>
                 <h2>@totalDebt</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card bg-primary text-white text-center">
+                <h5>Total Balance</h5>
+                <h2>@totalBalance</h2>
             </div>
         </div>
     </div>
 
     <div class="row mt-4">
         <div class="col-md-12">
-            <h3>Pie Chart</h3>
+            <div class="chart-title">Financial Overview</div>
             <MudPaper Class="pa-4">
-                <MudChart ChartType="ChartType.Pie" InputData="@chartData" InputLabels="@chartLabels" Width="100%" Height="300px" />
+                <MudChart ChartType="ChartType.Pie" InputData="@chartData" InputLabels="@chartLabels" Width="100%" Height="300px" Colors="@chartColors" />
             </MudPaper>
         </div>
     </div>
@@ -67,9 +79,11 @@
     private decimal totalIncome;
     private decimal totalExpense;
     private decimal totalDebt;
+    private decimal totalBalance;
 
     private double[] chartData;
-    private string[] chartLabels = { "Income", "Expense", "Debt" };
+    private string[] chartLabels = { "Income", "Expense", "Debt", "Balance" };
+    private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3" }; // Custom colors for the pie chart
 
     private List<Transaction> transactions = new List<Transaction>
     {
@@ -89,6 +103,7 @@
         totalIncome = transactions.Where(t => t.Type == "Income").Sum(t => t.Amount);
         totalExpense = transactions.Where(t => t.Type == "Expense").Sum(t => t.Amount);
         totalDebt = transactions.Where(t => t.Type == "Debt").Sum(t => t.Amount);
+        totalBalance = totalIncome - (totalExpense + totalDebt);
     }
 
     private void UpdateChartData()
@@ -97,7 +112,8 @@
         {
             (double)totalIncome,
             (double)totalExpense,
-            (double)totalDebt
+            (double)totalDebt,
+            (double)totalBalance
         };
     }
 
