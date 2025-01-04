@@ -1,0 +1,111 @@
+﻿@page "/dashboard"
+
+<style>
+    .dashboard-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .chart-container {
+        height: 300px;
+    }
+
+    .transaction-list {
+        margin-top: 20px;
+    }
+
+    .transaction-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+</style>
+
+<div class="container mt-4">
+    <h3 style="color:green">Dashboard</h3>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="dashboard-card bg-success text-white text-center">
+                <h5>Total Inflows</h5>
+                <h2>@totalIncome</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card bg-danger text-white text-center">
+                <h5>Total Outflows</h5>
+                <h2>@totalExpense</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card bg-warning text-white text-center">
+                <h5>Total Debt</h5>
+                <h2>@totalDebt</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Pie Chart</h3>
+            <MudPaper Class="pa-4">
+                <MudChart ChartType="ChartType.Pie" InputData="@chartData" InputLabels="@chartLabels" Width="100%" Height="300px" />
+            </MudPaper>
+        </div>
+    </div>
+</div>
+
+@code {
+    private decimal totalIncome;
+    private decimal totalExpense;
+    private decimal totalDebt;
+
+    private double[] chartData;
+    private string[] chartLabels = { "Income", "Expense", "Debt" };
+
+    private List<Transaction> transactions = new List<Transaction>
+    {
+        new Transaction { Description = "Grocery Shopping", Date = DateTime.Parse("2024-12-25"), Amount = 150, Type = "Expense" },
+        new Transaction { Description = "Freelance Payment", Date = DateTime.Parse("2024-12-24"), Amount = 500, Type = "Income" },
+        new Transaction { Description = "Borrowed from Someone", Date = DateTime.Parse("2024-12-22"), Amount = 300, Type = "Debt" }
+    };
+
+    protected override void OnInitialized()
+    {
+        CalculateTotals();
+        UpdateChartData();
+    }
+
+    private void CalculateTotals()
+    {
+        totalIncome = transactions.Where(t => t.Type == "Income").Sum(t => t.Amount);
+        totalExpense = transactions.Where(t => t.Type == "Expense").Sum(t => t.Amount);
+        totalDebt = transactions.Where(t => t.Type == "Debt").Sum(t => t.Amount);
+    }
+
+    private void UpdateChartData()
+    {
+        chartData = new double[]
+        {
+            (double)totalIncome,
+            (double)totalExpense,
+            (double)totalDebt
+        };
+    }
+
+    public class Transaction
+    {
+        public string Description { get; set; }
+        public DateTime Date { get; set; }
+        public decimal Amount { get; set; }
+        public string Type { get; set; } // Income, Expense, Debt
+    }
+}
