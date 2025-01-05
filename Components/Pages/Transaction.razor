@@ -113,7 +113,7 @@
         }
 
     .btn-edit {
-        background-color: #ffc107;
+        background-color: darkgreen;
         color: white;
     }
 
@@ -122,7 +122,7 @@
         }
 
     .btn-delete {
-        background-color: #dc3545;
+        background-color: red;
         color: white;
     }
 
@@ -142,6 +142,14 @@
 <!-- Search Section -->
 <div class="d-flex mb-4">
     <input type="text" class="form-control me-2" placeholder="Search by Description" @bind="searchQuery" />
+    <select class="form-control me-2" @bind="selectedCategory">
+        <option value="">Select Category</option>
+        @foreach (var category in categories)
+        {
+            <option value="@category.Name">@category.Name</option>
+        }
+    </select>
+    <input type="date" class="form-control me-2" @bind="selectedDate" />
     <button class="btn btn-outline-primary" @onclick="SearchTransactions">Search</button>
 </div>
 
@@ -153,6 +161,7 @@
             <th>Type</th>
             <th>Amount</th>
             <th>Description</th>
+            <th>Category</th> <!-- Added Category Column -->
             <th>From</th>
             <th>To</th>
             <th>Actions</th>
@@ -166,6 +175,7 @@
                 <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
                 <td>@transaction.Amount.ToString("C")</td>
                 <td>@transaction.Description</td>
+                <td>@transaction.Category</td> <!-- Display Category -->
                 <td>@transaction.From</td>
                 <td>@transaction.To</td>
                 <td class="action-buttons">
@@ -202,6 +212,15 @@
 
                     <label>Description</label>
                     <input type="text" class="form-control" @bind="transactionModel.Description" />
+
+                    <label>Category</label> <!-- Dropdown for Category -->
+                    <select class="form-control" @bind="transactionModel.Category">
+                        <option value="">Select Category</option>
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Name">@category.Name</option>
+                        }
+                    </select>
 
                     <label>From</label>
                     <input type="text" class="form-control" @bind="transactionModel.From" />
@@ -248,6 +267,8 @@
     private bool showCategoryModal = false;
     private bool isEditing = false;
     private string searchQuery = string.Empty;
+    private string selectedCategory = string.Empty;
+    private DateTime? selectedDate = null;
 
     public class FinancialTransaction
     {
@@ -255,6 +276,7 @@
         public string Type { get; set; }
         public decimal Amount { get; set; }
         public string Description { get; set; }
+        public string Category { get; set; } // Added Category property
         public string From { get; set; }
         public string To { get; set; }
     }
@@ -272,10 +294,16 @@
 
     protected override void OnInitialized()
     {
+        categories = new List<Category>
+        {
+            new() { Name = "Business" },
+            new() { Name = "Personal" },
+        };
+
         transactions = new List<FinancialTransaction>
         {
-            new() { Date = DateTime.Now.AddDays(-1), Type = "Income", Amount = 100, Description = "Project A", From = "Client A", To = "My Account" },
-            new() { Date = DateTime.Now.AddDays(-2), Type = "Expense", Amount = 50, Description = "Groceries", From = "My Account", To = "Grocery Store" },
+            new() { Date = DateTime.Now.AddDays(-1), Type = "Income", Amount = 100, Description = "Project A", From = "Client A", To = "My Account", Category = "Business" },
+            new() { Date = DateTime.Now.AddDays(-2), Type = "Expense", Amount = 50, Description = "Groceries", From = "My Account", To = "Grocery Store", Category = "Personal" },
         };
         filteredTransactions = transactions;
     }
@@ -335,9 +363,9 @@
     private void SearchTransactions()
     {
         filteredTransactions = transactions
-            .Where(t => t.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        t.From.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        t.To.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+            .Where(t => (string.IsNullOrEmpty(searchQuery) || t.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(selectedCategory) || t.Category == selectedCategory) &&
+                        (!selectedDate.HasValue || t.Date.Date == selectedDate.Value.Date))
             .ToList();
     }
 }

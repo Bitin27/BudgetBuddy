@@ -2,35 +2,80 @@
 @inject NavigationManager Navigation
 
 <style>
+    /* General Login Box Styling */
     .login-container {
         max-width: 400px;
         margin: 50px auto;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        border-radius: 15px;
+        background-color: #f5f3ff; /* Soft lavender background */
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0dff5;
     }
 
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-group label {
-        font-weight: bold;
-    }
-
-    .currency-dropdown {
-        width: 100%;
-    }
-
-    .btn-primary {
-        width: 100%;
-    }
-
+    /* Header Styling */
     .header {
         text-align: center;
+        margin-bottom: 30px;
+        color: #5e35b1; /* Purple text for header */
+    }
+
+    /* Form Group Styling */
+    .form-group {
         margin-bottom: 20px;
     }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4527a0; /* Deep purple for labels */
+            margin-bottom: 8px;
+            display: block;
+        }
+
+    /* Text Input Styling */
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+
+        /* Text Field Focus Effect */
+        .form-control:focus {
+            box-shadow: 0 0 8px rgba(94, 53, 177, 0.6); /* Purple shadow on focus */
+            border-color: #5e35b1; /* Purple border on focus */
+        }
+
+    /* Dropdown Styling */
+    .currency-dropdown {
+        background-color: #f9f7ff; /* Slightly off-white purple hue */
+    }
+
+        /* Consistent Focus Effect for Dropdowns */
+        .currency-dropdown:focus {
+            box-shadow: 0 0 8px rgba(94, 53, 177, 0.6); /* Purple shadow on focus */
+            border-color: #5e35b1; /* Purple border on focus */
+        }
+
+    /* Button Styling */
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        background-color: #5e35b1; /* Pleasant purple color */
+        color: white;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+        /* Button Hover Effect */
+        .btn-primary:hover {
+            background-color: #4527a0; /* Darker purple on hover */
+        }
 </style>
 
 <div class="login-container">
