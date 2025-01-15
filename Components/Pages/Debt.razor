@@ -1,0 +1,221 @@
+﻿@page "/debt"
+
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .form-control {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .btn {
+        border-radius: 8px;
+    }
+
+    .debt-table th {
+        background-color: #f8f9fa;
+    }
+
+    .debt-table tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        width: 450px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+    .modal-footer {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="dashboard-header">
+    <h2>Debt Management</h2>
+    <button class="btn btn-primary" @onclick="OpenDebtModal">Add Debt</button>
+</div>
+
+<table class="table debt-table">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var debt in debts)
+        {
+            <tr>
+                <td>@debt.Description</td>
+                <td>@debt.Amount.ToString("C")</td>
+                <td>@debt.Type</td>
+                <td>@debt.Category</td>
+                <td>@debt.DueDate.ToString("yyyy-MM-dd")</td>
+                <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
+                <td>
+                    <button class="btn btn-warning" @onclick="() => OpenEditModal(debt)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteDebt(debt)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (showDebtModal)
+{
+    <div class="modal">
+        <div class="modal-content">
+            <h2>@modalTitle</h2>
+
+            <!-- Form Fields -->
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input id="description" type="text" class="form-control" placeholder="Description" @bind="currentDebt.Description" />
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <input id="amount" type="number" class="form-control" placeholder="Amount" @bind="currentDebt.Amount" />
+            </div>
+
+            <div class="form-group">
+                <label for="type">Type</label>
+                <select id="type" class="form-control" @bind="currentDebt.Type">
+                    <option value="Personal">Personal</option>
+                    <option value="Business">Business</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <input id="category" type="text" class="form-control" placeholder="Category" @bind="currentDebt.Category" />
+            </div>
+
+            <div class="form-group">
+                <label for="dueDate">Due Date</label>
+                <input id="dueDate" type="date" class="form-control" @bind="currentDebt.DueDate" />
+            </div>
+
+            <div class="form-group">
+                <label for="isPaid">Status</label>
+                <select id="isPaid" class="form-control" @bind="currentDebt.IsPaid">
+                    <option value="false">Unpaid</option>
+                    <option value="true">Paid</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseDebtModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveDebt">Save</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<DebtRecord> debts = new();
+    private DebtRecord currentDebt = new();
+    private bool showDebtModal = false;
+    private string modalTitle = "Add Debt";
+
+    protected override async Task OnInitializedAsync()
+    {
+        debts = await DebtDatabase.LoadDebtsAsync();
+    }
+
+    private void OpenDebtModal()
+    {
+        currentDebt = new DebtRecord { DueDate = DateTime.Now };
+        modalTitle = "Add Debt";
+        showDebtModal = true;
+    }
+
+    private void OpenEditModal(DebtRecord debt)
+    {
+        currentDebt = new DebtRecord
+            {
+                Id = debt.Id,
+                Description = debt.Description,
+                Amount = debt.Amount,
+                Type = debt.Type,
+                Category = debt.Category,
+                DueDate = debt.DueDate,
+                IsPaid = debt.IsPaid
+            };
+        modalTitle = "Edit Debt";
+        showDebtModal = true;
+    }
+
+    private async Task SaveDebt()
+    {
+        if (modalTitle == "Add Debt")
+        {
+            currentDebt.Id = Guid.NewGuid();
+            debts.Add(currentDebt);
+        }
+        else
+        {
+            var existingDebt = debts.FirstOrDefault(d => d.Id == currentDebt.Id);
+            if (existingDebt != null)
+            {
+                existingDebt.Description = currentDebt.Description;
+                existingDebt.Amount = currentDebt.Amount;
+                existingDebt.Type = currentDebt.Type;
+                existingDebt.Category = currentDebt.Category;
+                existingDebt.DueDate = currentDebt.DueDate;
+                existingDebt.IsPaid = currentDebt.IsPaid;
+            }
+        }
+
+        await DebtDatabase.SaveDebtsAsync(debts);
+        showDebtModal = false;
+    }
+
+    private async Task DeleteDebt(DebtRecord debt)
+    {
+        debts.Remove(debt);
+        await DebtDatabase.SaveDebtsAsync(debts);
+    }
+
+    private void CloseDebtModal()
+    {
+        showDebtModal = false;
+    }
+}
