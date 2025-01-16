@@ -235,7 +235,7 @@
 
     private void OpenDebtModal()
     {
-        currentDebt = new DebtRecord { DueDate = DateTime.Now };
+        currentDebt = new DebtRecord { DueDate = DateTime.Now, IsPaid = false }; // Set IsPaid to false by default
         modalTitle = "Add Debt";
         showDebtModal = true;
     }
@@ -250,7 +250,7 @@
                 Type = debt.Type,
                 Category = debt.Category,
                 DueDate = debt.DueDate,
-                IsPaid = debt.IsPaid
+                IsPaid = debt.IsPaid // Ensure IsPaid is properly initialized
             };
         modalTitle = "Edit Debt";
         showDebtModal = true;

@@ -47,6 +47,10 @@
     .legend-text {
         font-size: 0.9rem;
     }
+
+    .table-container {
+        margin-top: 20px;
+    }
 </style>
 
 <div class="container mt-4">
@@ -107,44 +111,119 @@
         </div>
     </div>
 
-    <!-- Debt Records -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <h5>Debt Records</h5>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Category</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (debts != null && debts.Any())
-                    {
-                        @foreach (var debt in debts)
-                        {
-                            <tr>
-                                <td>@debt.Description</td>
-                                <td>@debt.Amount</td>
-                                <td>@debt.Category</td>
-                                <td>@debt.DueDate.ToShortDateString()</td>
-                                <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
-                            </tr>
-                        }
-                    }
-                    else
+    <!-- Inflow Table -->
+    <div class="table-container">
+        <h5>Inflow Records</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Notes</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (inflows != null && inflows.Any())
+                {
+                    @foreach (var transaction in inflows)
                     {
                         <tr>
-                            <td colspan="5" class="text-center">No debts found</td>
+                            <td>@transaction.Description</td>
+                            <td>@transaction.Notes</td>
+                            <td>@transaction.Date.ToShortDateString()</td>
+                            <td>@transaction.Amount.ToString("C")</td>
+                            <td class="text-success">@transaction.Type</td>
+                            <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
                         </tr>
                     }
                 }
-                </tbody>
-            </table>
-        </div>
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">No inflow records found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Outflow Table -->
+    <div class="table-container">
+        <h5>Outflow Records</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Notes</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (outflows != null && outflows.Any())
+                {
+                    @foreach (var transaction in outflows)
+                    {
+                        <tr>
+                            <td>@transaction.Description</td>
+                            <td>@transaction.Notes</td>
+                            <td>@transaction.Date.ToShortDateString()</td>
+                            <td>@transaction.Amount.ToString("C")</td>
+                            <td class="text-danger">@transaction.Type</td>
+                            <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">No outflow records found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Debt Records -->
+    <div class="table-container">
+        <h5>Debt Records</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (debts != null && debts.Any())
+                {
+                    @foreach (var debt in debts)
+                    {
+                        <tr>
+                            <td>@debt.Description</td>
+                            <td>@debt.Amount.ToString("C")</td>
+                            <td>@debt.Category</td>
+                            <td>@debt.DueDate.ToShortDateString()</td>
+                            <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center">No debts found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -159,6 +238,8 @@
     private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3" };
 
     private List<DebtRecord> debts = new();
+    private List<FinancialTransaction> inflows = new();
+    private List<FinancialTransaction> outflows = new();
 
     [Inject]
     private TransactionService TransService { get; set; }
@@ -170,6 +251,7 @@
     {
         await FetchFinancialData();
         await LoadDebtRecords();
+        await LoadTransactions();
         UpdateChartData();
     }
 
@@ -184,6 +266,13 @@
     private async Task LoadDebtRecords()
     {
         debts = await DebtService.GetAllDebtsAsync();
+    }
+
+    private async Task LoadTransactions()
+    {
+        var transactions = await TransService.GetTransactionsAsync();
+        inflows = transactions.Where(t => t.Type == "Income").ToList();
+        outflows = transactions.Where(t => t.Type == "Expense").ToList();
     }
 
     private void UpdateChartData()
