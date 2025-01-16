@@ -205,9 +205,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        filteredDebts = await debtService.GetFilteredDebtsAsync(
-            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
-        );
+        debts = await debtService.GetAllDebtsAsync();
+        filteredDebts = new List<DebtRecord>(debts);
     }
 
     private void ApplyFilters()
@@ -222,13 +221,15 @@
             .ToList();
     }
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         filterDescription = string.Empty;
         filterType = string.Empty;
         filterCategory = string.Empty;
         filterStartDate = null;
         filterEndDate = null;
+
+        debts = await debtService.GetAllDebtsAsync();
         filteredDebts = new List<DebtRecord>(debts);
     }
 
@@ -267,10 +268,8 @@
             await debtService.EditDebtAsync(currentDebt);
         }
 
-        filteredDebts = await debtService.GetFilteredDebtsAsync(
-            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
-        );
-
+        debts = await debtService.GetAllDebtsAsync();
+        ApplyFilters();
         showDebtModal = false;
     }
 
@@ -282,8 +281,7 @@
     private async Task DeleteDebt(DebtRecord debt)
     {
         await debtService.DeleteDebtAsync(debt.Id);
-        filteredDebts = await debtService.GetFilteredDebtsAsync(
-            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
-        );
+        debts = await debtService.GetAllDebtsAsync();
+        ApplyFilters();
     }
 }
