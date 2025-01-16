@@ -1,4 +1,5 @@
-﻿@page "/dashboard"
+﻿@using BudgetBuddy.Services
+@page "/dashboard"
 
 <style>
     .dashboard-card {
@@ -105,6 +106,46 @@
             </div>
         </div>
     </div>
+
+    <!-- Debt Records -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h5>Debt Records</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Category</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (debts != null && debts.Any())
+                    {
+                        @foreach (var debt in debts)
+                        {
+                            <tr>
+                                <td>@debt.Description</td>
+                                <td>@debt.Amount</td>
+                                <td>@debt.Category</td>
+                                <td>@debt.DueDate.ToShortDateString()</td>
+                                <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">No debts found</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -115,27 +156,34 @@
 
     private double[] chartData;
     private string[] chartLabels = { "Income", "Expense", "Debt", "Balance" };
-    private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3" }; // Blue, Green, Red, Purple
+    private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3" };
 
-    private List<Transaction> transactions = new List<Transaction>
-    {
-        new Transaction { Description = "Grocery Shopping", Date = DateTime.Parse("2024-12-25"), Amount = 1000, Type = "Expense" },
-        new Transaction { Description = "Freelance Payment", Date = DateTime.Parse("2024-12-24"), Amount = 5000, Type = "Income" },
-        new Transaction { Description = "Borrowed from Someone", Date = DateTime.Parse("2024-12-22"), Amount = 3000, Type = "Debt" }
-    };
+    private List<DebtRecord> debts = new();
 
-    protected override void OnInitialized()
+    [Inject]
+    private TransactionService TransService { get; set; }
+
+    [Inject]
+    private DebtService DebtService { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        CalculateTotals();
+        await FetchFinancialData();
+        await LoadDebtRecords();
         UpdateChartData();
     }
 
-    private void CalculateTotals()
+    private async Task FetchFinancialData()
     {
-        totalIncome = transactions.Where(t => t.Type == "Income").Sum(t => t.Amount);
-        totalExpense = transactions.Where(t => t.Type == "Expense").Sum(t => t.Amount);
-        totalDebt = transactions.Where(t => t.Type == "Debt").Sum(t => t.Amount);
+        totalIncome = await TransService.GetTotalIncomeAsync();
+        totalExpense = await TransService.GetTotalExpenseAsync();
+        totalDebt = await DebtService.GetTotalDebtAsync();
         totalBalance = totalIncome + totalDebt - totalExpense;
+    }
+
+    private async Task LoadDebtRecords()
+    {
+        debts = await DebtService.GetAllDebtsAsync();
     }
 
     private void UpdateChartData()
@@ -147,13 +195,5 @@
             (double)totalDebt,
             (double)totalBalance
         };
-    }
-
-    public class Transaction
-    {
-        public string Description { get; set; }
-        public DateTime Date { get; set; }
-        public decimal Amount { get; set; }
-        public string Type { get; set; } // Income, Expense, Debt
     }
 }

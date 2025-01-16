@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using BudgetBuddy.Services;
 
 namespace BudgetBuddy
 {
@@ -18,7 +19,11 @@ namespace BudgetBuddy
 
 #if DEBUG
     		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddScoped<TransactionService>();
+            builder.Services.AddScoped<DebtService>();
+
+
+            builder.Logging.AddDebug();
 #endif
 
             return builder.Build();

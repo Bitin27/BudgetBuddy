@@ -1,5 +1,7 @@
 ﻿@page "/debt"
 
+@inject DebtService debtService
+
 <style>
     .dashboard-header {
         display: flex;
@@ -8,10 +10,15 @@
         margin-bottom: 20px;
     }
 
-    .form-control {
-        width: 100%;
-        margin-bottom: 10px;
+    .form-group {
+        margin-bottom: 15px;
     }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
 
     .btn {
         border-radius: 8px;
@@ -44,21 +51,23 @@
         width: 450px;
     }
 
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
     .modal-footer {
         display: flex;
         justify-content: space-between;
         margin-top: 20px;
     }
+
+    .filter-section {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+        .filter-section .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
 </style>
 
 <div class="dashboard-header">
@@ -66,6 +75,37 @@
     <button class="btn btn-primary" @onclick="OpenDebtModal">Add Debt</button>
 </div>
 
+<!-- Filter Section -->
+<div class="filter-section">
+    <div class="form-group">
+        <label for="filterDescription">Description</label>
+        <input id="filterDescription" type="text" class="form-control" placeholder="Description" @bind="filterDescription" />
+    </div>
+    <div class="form-group">
+        <label for="filterType">Type</label>
+        <select id="filterType" class="form-control" @bind="filterType">
+            <option value="">All</option>
+            <option value="Personal">Personal</option>
+            <option value="Business">Business</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="filterCategory">Category</label>
+        <input id="filterCategory" type="text" class="form-control" placeholder="Category" @bind="filterCategory" />
+    </div>
+    <div class="form-group">
+        <label for="filterStartDate">Start Date</label>
+        <input id="filterStartDate" type="date" class="form-control" @bind="filterStartDate" />
+    </div>
+    <div class="form-group">
+        <label for="filterEndDate">End Date</label>
+        <input id="filterEndDate" type="date" class="form-control" @bind="filterEndDate" />
+    </div>
+    <button class="btn btn-primary" @onclick="ApplyFilters">Filter</button>
+    <button class="btn btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+</div>
+
+<!-- Debt Table -->
 <table class="table debt-table">
     <thead>
         <tr>
@@ -79,7 +119,7 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var debt in debts)
+        @foreach (var debt in filteredDebts)
         {
             <tr>
                 <td>@debt.Description</td>
@@ -97,6 +137,7 @@
     </tbody>
 </table>
 
+<!-- Modal for Adding/Editing Debt -->
 @if (showDebtModal)
 {
     <div class="modal">
@@ -151,13 +192,44 @@
 
 @code {
     private List<DebtRecord> debts = new();
+    private List<DebtRecord> filteredDebts = new();
     private DebtRecord currentDebt = new();
     private bool showDebtModal = false;
     private string modalTitle = "Add Debt";
 
+    private string filterDescription = string.Empty;
+    private string filterType = string.Empty;
+    private string filterCategory = string.Empty;
+    private DateTime? filterStartDate = null;
+    private DateTime? filterEndDate = null;
+
     protected override async Task OnInitializedAsync()
     {
-        debts = await DebtDatabase.LoadDebtsAsync();
+        filteredDebts = await debtService.GetFilteredDebtsAsync(
+            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
+        );
+    }
+
+    private void ApplyFilters()
+    {
+        filteredDebts = debts
+            .Where(d =>
+                (string.IsNullOrEmpty(filterDescription) || d.Description.Contains(filterDescription, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrEmpty(filterType) || d.Type == filterType) &&
+                (string.IsNullOrEmpty(filterCategory) || d.Category.Contains(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
+                (!filterStartDate.HasValue || d.DueDate >= filterStartDate.Value) &&
+                (!filterEndDate.HasValue || d.DueDate <= filterEndDate.Value))
+            .ToList();
+    }
+
+    private void ClearFilters()
+    {
+        filterDescription = string.Empty;
+        filterType = string.Empty;
+        filterCategory = string.Empty;
+        filterStartDate = null;
+        filterEndDate = null;
+        filteredDebts = new List<DebtRecord>(debts);
     }
 
     private void OpenDebtModal()
@@ -188,34 +260,30 @@
         if (modalTitle == "Add Debt")
         {
             currentDebt.Id = Guid.NewGuid();
-            debts.Add(currentDebt);
+            await debtService.AddDebtAsync(currentDebt);
         }
         else
         {
-            var existingDebt = debts.FirstOrDefault(d => d.Id == currentDebt.Id);
-            if (existingDebt != null)
-            {
-                existingDebt.Description = currentDebt.Description;
-                existingDebt.Amount = currentDebt.Amount;
-                existingDebt.Type = currentDebt.Type;
-                existingDebt.Category = currentDebt.Category;
-                existingDebt.DueDate = currentDebt.DueDate;
-                existingDebt.IsPaid = currentDebt.IsPaid;
-            }
+            await debtService.EditDebtAsync(currentDebt);
         }
 
-        await DebtDatabase.SaveDebtsAsync(debts);
-        showDebtModal = false;
-    }
+        filteredDebts = await debtService.GetFilteredDebtsAsync(
+            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
+        );
 
-    private async Task DeleteDebt(DebtRecord debt)
-    {
-        debts.Remove(debt);
-        await DebtDatabase.SaveDebtsAsync(debts);
+        showDebtModal = false;
     }
 
     private void CloseDebtModal()
     {
         showDebtModal = false;
+    }
+
+    private async Task DeleteDebt(DebtRecord debt)
+    {
+        await debtService.DeleteDebtAsync(debt.Id);
+        filteredDebts = await debtService.GetFilteredDebtsAsync(
+            filterDescription, filterType, filterCategory, filterStartDate, filterEndDate
+        );
     }
 }
