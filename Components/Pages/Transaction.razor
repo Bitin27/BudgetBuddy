@@ -24,7 +24,13 @@
         margin-bottom: 10px;
     }
 
-    .btn-primary, .btn-secondary, .btn-warning, .btn-danger {
+    .btn {
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+    }
+
+    .btn-primary, .btn-secondary, .btn-warning, .btn-danger, .btn-info {
         border-radius: 8px;
     }
 
@@ -60,7 +66,42 @@
         display: flex;
         justify-content: flex-end;
     }
+
+    h1 {
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 2rem;
+    }
+
+    .transaction-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+        .transaction-actions button {
+            width: 120px;
+        }
+
+    .filter-container {
+        gap: 15px;
+    }
+
+    .stats-container {
+        display: flex;
+        gap: 10px;
+    }
+
+    .stat-card {
+        background: #f8f9fa;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-align: center;
+        width: 200px;
+    }
+
 </style>
+
+<h1>Transaction</h1>
 
 <div class="dashboard-header">
     <div class="buttons-container">
@@ -68,57 +109,95 @@
         <button class="btn btn-secondary" @onclick="OpenCategoryModal">Add Category</button>
     </div>
 
-    <div class="filter-container">
-        <select class="form-control" @bind="selectedType">
-            <option value="">Select Type</option>
-            <option value="Income">Income</option>
-            <option value="Expense">Expense</option>
-            <option value="Debt">Debt</option>
-        </select>
-        <select class="form-control" @bind="selectedCategory">
-            <option value="">Select Category</option>
-            @foreach (var category in database.Categories)
-            {
-                <option value="@category">@category</option>
-            }
-        </select>
-        <input type="date" class="form-control" @bind="startDate" />
-        <input type="date" class="form-control" @bind="endDate" />
-        <button class="btn btn-primary" @onclick="FilterTransactions">Filter</button>
-        <button class="btn btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+    <div class="stats-container">
+        <button class="btn btn-info" @onclick="ToggleHighestTransactions">Highest Transaction</button>
+        <button class="btn btn-info" @onclick="ToggleLowestTransactions">Lowest Transaction</button>
     </div>
 </div>
 
-<table class="table transaction-table">
-    <thead>
-        <tr>
-            <th>Description</th>
-            <th>Notes</th>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Type</th>
-            <th>Category</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var transaction in filteredTransactions)
+<div class="filter-container">
+    <input type="text" class="form-control" placeholder="Filter by Description" @bind="descriptionFilter" />
+    <select class="form-control" @bind="selectedType">
+        <option value="">Select Type</option>
+        <option value="Income">Income</option>
+        <option value="Expense">Expense</option>
+        <option value="Debt">Debt</option>
+    </select>
+    <select class="form-control" @bind="selectedCategory">
+        <option value="">Select Category</option>
+        @foreach (var category in database.Categories)
         {
-            <tr>
-                <td>@transaction.Description</td>
-                <td>@transaction.Notes</td>
-                <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
-                <td>@transaction.Amount.ToString("C")</td>
-                <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
-                <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
-                <td>
-                    <button class="btn btn-warning" @onclick="() => OpenEditModal(transaction)">Edit</button>
-                    <button class="btn btn-danger" @onclick="() => DeleteTransaction(transaction)">Delete</button>
-                </td>
-            </tr>
+            <option value="@category">@category</option>
         }
-    </tbody>
-</table>
+    </select>
+    <input type="date" class="form-control" @bind="startDate" />
+    <input type="date" class="form-control" @bind="endDate" />
+    <button class="btn btn-primary" @onclick="FilterTransactions">Filter</button>
+    <button class="btn btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+</div>
+
+@if (showTopTransactions)
+{
+    <h3>@topTransactionsTitle</h3>
+    <table class="table transaction-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Notes</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Type</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var transaction in topTransactions)
+            {
+                <tr>
+                    <td>@transaction.Description</td>
+                    <td>@transaction.Notes</td>
+                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td> <!-- Format the date -->
+                    <td>@transaction.Amount.ToString("C")</td>
+                    <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
+                    <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <table class="table transaction-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Notes</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var transaction in filteredTransactions)
+            {
+                <tr>
+                    <td>@transaction.Description</td>
+                    <td>@transaction.Notes</td>
+                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td> <!-- Format the date -->
+                    <td>@transaction.Amount.ToString("C")</td>
+                    <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
+                    <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
+                    <td class="transaction-actions">
+                        <button class="btn btn-warning" @onclick="() => OpenEditModal(transaction)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteTransaction(transaction)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @if (showTransactionModal)
 {
@@ -150,7 +229,7 @@
                 </select>
             </div>
             <div>
-                <label>Category:</label>
+                <label>Category Tag:</label>
                 <select class="form-control" @bind="transactionModel.Category">
                     <option value="">Select Category</option>
                     @foreach (var category in database.Categories)
@@ -195,12 +274,50 @@
     private string selectedCategory = string.Empty;
     private DateTime startDate = DateTime.MinValue;
     private DateTime endDate = DateTime.MaxValue;
+    private string descriptionFilter = string.Empty;
     private List<FinancialTransaction> filteredTransactions = new();
+    private bool showTopTransactions = false;
+    private string topTransactionsTitle = string.Empty;
+    private List<FinancialTransaction> topTransactions = new();
 
     protected override async Task OnInitializedAsync()
     {
         database = await TransactionDatabase.LoadDatabaseAsync();
         filteredTransactions = database.Transactions;
+    }
+
+    private void ToggleHighestTransactions()
+    {
+        if (showTopTransactions)
+        {
+            showTopTransactions = false;
+        }
+        else
+        {
+            topTransactions = database.Transactions
+                .OrderByDescending(t => t.Amount)
+                .Take(5)
+                .ToList();
+            topTransactionsTitle = "Top 5 Highest Transactions";
+            showTopTransactions = true;
+        }
+    }
+
+    private void ToggleLowestTransactions()
+    {
+        if (showTopTransactions)
+        {
+            showTopTransactions = false;
+        }
+        else
+        {
+            topTransactions = database.Transactions
+                .OrderBy(t => t.Amount)
+                .Take(5)
+                .ToList();
+            topTransactionsTitle = "Top 5 Lowest Transactions";
+            showTopTransactions = true;
+        }
     }
 
     private void OpenAddModal()
@@ -267,14 +384,17 @@
     private void FilterTransactions()
     {
         filteredTransactions = database.Transactions
-            .Where(t => (string.IsNullOrEmpty(selectedType) || t.Type.Equals(selectedType, StringComparison.OrdinalIgnoreCase)) &&
+            .Where(t => (string.IsNullOrEmpty(descriptionFilter) || t.Description.Contains(descriptionFilter, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(selectedType) || t.Type.Equals(selectedType, StringComparison.OrdinalIgnoreCase)) &&
                         (string.IsNullOrEmpty(selectedCategory) || (t.Category != null && t.Category.Equals(selectedCategory, StringComparison.OrdinalIgnoreCase))) &&
-                        (t.Date >= startDate && t.Date <= endDate))
+                        (startDate == DateTime.MinValue || t.Date >= startDate) && // Filter if startDate is set
+                        (endDate == DateTime.MaxValue || t.Date <= endDate)) // Filter if endDate is set
             .ToList();
     }
 
     private void ClearFilters()
     {
+        descriptionFilter = string.Empty;
         selectedType = string.Empty;
         selectedCategory = string.Empty;
         startDate = DateTime.MinValue;

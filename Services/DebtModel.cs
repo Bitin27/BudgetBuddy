@@ -6,6 +6,18 @@
         return await DebtDatabase.LoadDebtsAsync();
     }
 
+    // Fetch only unpaid debts
+    public async Task<List<DebtRecord>> GetUnpaidDebtsAsync()
+    {
+        var debts = await DebtDatabase.LoadDebtsAsync();
+        return debts.Where(d => !d.IsPaid).ToList();
+    }
+
+    public async Task<List<DebtRecord>> GetpaidDebtsAsync()
+    {
+        var debts = await DebtDatabase.LoadDebtsAsync();
+        return debts.Where(d => d.IsPaid).ToList();
+    }
     // Add a new debt
     public async Task AddDebtAsync(DebtRecord debt)
     {
@@ -48,6 +60,13 @@
     {
         var debts = await DebtDatabase.LoadDebtsAsync();
         return debts.Where(d => !d.IsPaid).Sum(d => d.Amount);
+    }
+
+    // Get total paid debt amount
+    public async Task<decimal> GetTotalPaidDebtAsync()
+    {
+        var debts = await DebtDatabase.LoadDebtsAsync();
+        return debts.Where(d => d.IsPaid).Sum(d => d.Amount);
     }
 
     // Filter debts based on dashboard criteria

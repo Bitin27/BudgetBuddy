@@ -1,4 +1,5 @@
-﻿@using BudgetBuddy.Services
+﻿@using System.Linq
+@using BudgetBuddy.Services
 @page "/dashboard"
 
 <style>
@@ -51,11 +52,60 @@
     .table-container {
         margin-top: 20px;
     }
+
+    .date-range-filter {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+        .date-range-filter input {
+            width: 200px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .date-range-filter button {
+            padding: 7px 15px;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+            .date-range-filter button.clear-btn {
+                background-color: #f44336;
+            }
+
+            .date-range-filter button:hover {
+                background-color: #45a049;
+            }
+
+            .date-range-filter button.clear-btn:hover {
+                background-color: #e53935;
+            }
 </style>
 
 <div class="container mt-4">
     <h3 style="color:green">Dashboard</h3>
 
+    <!-- Date Range Filter -->
+    <div class="date-range-filter">
+        <div>
+            <label for="startDate">Start Date</label>
+            <input type="date" id="startDate" @bind="startDate" />
+        </div>
+        <div>
+            <label for="endDate">End Date</label>
+            <input type="date" id="endDate" @bind="endDate" />
+        </div>
+        <button @onclick="FilterData">Filter</button>
+        <button class="clear-btn" @onclick="ClearFilter">Clear</button>
+    </div>
+
+    <!-- Dashboard Cards -->
     <div class="row">
         <div class="col-md-3">
             <div class="dashboard-card bg-success text-white text-center">
@@ -71,7 +121,7 @@
         </div>
         <div class="col-md-3">
             <div class="dashboard-card bg-warning text-white text-center">
-                <h5>Total Debt</h5>
+                <h5>Total Unpaid Debt</h5>
                 <h2>@totalDebt</h2>
             </div>
         </div>
@@ -81,8 +131,16 @@
                 <h2>@totalBalance</h2>
             </div>
         </div>
+        <!-- Paid Debt Card -->
+        <div class="col-md-3">
+            <div class="dashboard-card bg-info text-white text-center">
+                <h5>Total Paid Debts</h5>
+                <h2>@totalPaidDebt</h2>
+            </div>
+        </div>
     </div>
 
+    <!-- Financial Overview Chart -->
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="chart-title">Financial Overview</div>
@@ -106,6 +164,10 @@
                 <div class="legend-item">
                     <div class="legend-color" style="background-color: #2196F3;"></div>
                     <div class="legend-text">Balance</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #00BCD4;"></div>
+                    <div class="legend-text">Paid Debt</div>
                 </div>
             </div>
         </div>
@@ -189,42 +251,74 @@
         </table>
     </div>
 
-    <!-- Debt Records -->
+    <!-- Unpaid Debt Table -->
     <div class="table-container">
-        <h5>Debt Records</h5>
+        <h5>Unpaid Debt Records</h5>
         <table class="table table-striped">
             <thead>
                 <tr>
                     <th>Description</th>
                     <th>Amount</th>
-                    <th>Category</th>
                     <th>Due Date</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                @if (debts != null && debts.Any())
+                @if (pendingDebts != null && pendingDebts.Any())
                 {
-                    @foreach (var debt in debts)
+                    @foreach (var debt in pendingDebts)
                     {
                         <tr>
                             <td>@debt.Description</td>
                             <td>@debt.Amount.ToString("C")</td>
-                            <td>@debt.Category</td>
                             <td>@debt.DueDate.ToShortDateString()</td>
-                            <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
+                            <td class="text-warning">Unpaid</td>
                         </tr>
                     }
                 }
                 else
                 {
                     <tr>
-                        <td colspan="5" class="text-center">No debts found</td>
+                        <td colspan="4" class="text-center">No unpaid debt records found</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+
+    <!-- Paid Debt Table (No Paid Date column) -->
+    <div class="table-container">
+        <h5>Paid Debt Records</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (paidDebts != null && paidDebts.Any())
+                {
+                    @foreach (var debt in paidDebts)
+                    {
+                        <tr>
+                            <td>@debt.Description</td>
+                            <td>@debt.Amount.ToString("C")</td>
+                            <td class="text-success">Paid</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="3" class="text-center">No paid debt records found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 @code {
@@ -232,14 +326,19 @@
     private decimal totalExpense;
     private decimal totalDebt;
     private decimal totalBalance;
+    private decimal totalPaidDebt;
 
     private double[] chartData;
-    private string[] chartLabels = { "Income", "Expense", "Debt", "Balance" };
-    private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3" };
+    private string[] chartLabels = { "Income", "Expense", "Debt", "Balance", "Paid Debt" };
+    private string[] chartColors = { "#4CAF50", "#F44336", "#FF9800", "#2196F3", "#00BCD4" };
 
-    private List<DebtRecord> debts = new();
+    private List<DebtRecord> pendingDebts = new();
+    private List<DebtRecord> paidDebts = new();
     private List<FinancialTransaction> inflows = new();
     private List<FinancialTransaction> outflows = new();
+
+    private DateTime? startDate;
+    private DateTime? endDate;
 
     [Inject]
     private TransactionService TransService { get; set; }
@@ -250,7 +349,8 @@
     protected override async Task OnInitializedAsync()
     {
         await FetchFinancialData();
-        await LoadDebtRecords();
+        await LoadPendingDebtRecords();
+        await LoadPaidDebtRecords();
         await LoadTransactions();
         UpdateChartData();
     }
@@ -260,12 +360,18 @@
         totalIncome = await TransService.GetTotalIncomeAsync();
         totalExpense = await TransService.GetTotalExpenseAsync();
         totalDebt = await DebtService.GetTotalDebtAsync();
+        totalPaidDebt = await DebtService.GetTotalPaidDebtAsync();
         totalBalance = totalIncome + totalDebt - totalExpense;
     }
 
-    private async Task LoadDebtRecords()
+    private async Task LoadPendingDebtRecords()
     {
-        debts = await DebtService.GetAllDebtsAsync();
+        pendingDebts = await DebtService.GetUnpaidDebtsAsync();
+    }
+
+    private async Task LoadPaidDebtRecords()
+    {
+        paidDebts = await DebtService.GetpaidDebtsAsync();
     }
 
     private async Task LoadTransactions()
@@ -275,14 +381,46 @@
         outflows = transactions.Where(t => t.Type == "Expense").ToList();
     }
 
+    private void UpdateCardValues()
+    {
+        totalIncome = inflows.Sum(t => t.Amount);
+        totalExpense = outflows.Sum(t => t.Amount);
+        totalDebt = pendingDebts.Sum(d => d.Amount);
+        totalPaidDebt = paidDebts.Sum(d => d.Amount);
+        totalBalance = totalIncome + totalDebt - totalExpense;
+    }
+
     private void UpdateChartData()
     {
-        chartData = new double[]
-        {
+        chartData = new double[] {
             (double)totalIncome,
             (double)totalExpense,
             (double)totalDebt,
-            (double)totalBalance
-        };
+            (double)totalBalance,
+            (double)totalPaidDebt
+    };
+    }
+
+    private void FilterData()
+    {
+        if (startDate.HasValue && endDate.HasValue)
+        {
+            inflows = inflows.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
+            outflows = outflows.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
+            pendingDebts = pendingDebts.Where(d => d.DueDate >= startDate && d.DueDate <= endDate).ToList();
+            UpdateCardValues();
+            UpdateChartData();
+        }
+    }
+
+    private void ClearFilter()
+    {
+        startDate = null;
+        endDate = null;
+        LoadTransactions();
+        LoadPendingDebtRecords();
+        LoadPaidDebtRecords();
+        UpdateCardValues();
+        UpdateChartData();
     }
 }

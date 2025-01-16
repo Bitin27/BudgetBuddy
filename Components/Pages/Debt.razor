@@ -75,19 +75,19 @@
     <button class="btn btn-primary" @onclick="OpenDebtModal">Add Debt</button>
 </div>
 
+<!-- Highest/Lowest Debt Filters -->
+<div class="dashboard-header">
+    <div class="stats-container">
+        <button class="btn btn-info" @onclick="ToggleHighestDebts">Highest Debt</button>
+        <button class="btn btn-info" @onclick="ToggleLowestDebts">Lowest Debt</button>
+    </div>
+</div>
+
 <!-- Filter Section -->
 <div class="filter-section">
     <div class="form-group">
         <label for="filterDescription">Description</label>
         <input id="filterDescription" type="text" class="form-control" placeholder="Description" @bind="filterDescription" />
-    </div>
-    <div class="form-group">
-        <label for="filterType">Type</label>
-        <select id="filterType" class="form-control" @bind="filterType">
-            <option value="">All</option>
-            <option value="Personal">Personal</option>
-            <option value="Business">Business</option>
-        </select>
     </div>
     <div class="form-group">
         <label for="filterCategory">Category</label>
@@ -111,7 +111,6 @@
         <tr>
             <th>Description</th>
             <th>Amount</th>
-            <th>Type</th>
             <th>Category</th>
             <th>Due Date</th>
             <th>Status</th>
@@ -124,13 +123,15 @@
             <tr>
                 <td>@debt.Description</td>
                 <td>@debt.Amount.ToString("C")</td>
-                <td>@debt.Type</td>
                 <td>@debt.Category</td>
-                <td>@debt.DueDate.ToString("yyyy-MM-dd")</td>
+                <td>@debt.DueDate.ToString("MM/dd/yyyy")</td>
                 <td>@(debt.IsPaid ? "Paid" : "Unpaid")</td>
                 <td>
                     <button class="btn btn-warning" @onclick="() => OpenEditModal(debt)">Edit</button>
                     <button class="btn btn-danger" @onclick="() => DeleteDebt(debt)">Delete</button>
+                    <button class="btn btn-success" @onclick="() => TogglePaidStatus(debt)">
+                        @(debt.IsPaid ? "Mark Unpaid" : "Mark Paid")
+                    </button>
                 </td>
             </tr>
         }
@@ -156,14 +157,6 @@
             </div>
 
             <div class="form-group">
-                <label for="type">Type</label>
-                <select id="type" class="form-control" @bind="currentDebt.Type">
-                    <option value="Personal">Personal</option>
-                    <option value="Business">Business</option>
-                </select>
-            </div>
-
-            <div class="form-group">
                 <label for="category">Category</label>
                 <input id="category" type="text" class="form-control" placeholder="Category" @bind="currentDebt.Category" />
             </div>
@@ -173,13 +166,16 @@
                 <input id="dueDate" type="date" class="form-control" @bind="currentDebt.DueDate" />
             </div>
 
-            <div class="form-group">
-                <label for="isPaid">Status</label>
-                <select id="isPaid" class="form-control" @bind="currentDebt.IsPaid">
-                    <option value="false">Unpaid</option>
-                    <option value="true">Paid</option>
-                </select>
-            </div>
+            @if (modalTitle != "Edit Debt")
+            {
+                <div class="form-group">
+                    <label for="isPaid">Status</label>
+                    <select id="isPaid" class="form-control" @bind="currentDebt.IsPaid">
+                        <option value="false">Unpaid</option>
+                        <option value="true">Paid</option>
+                    </select>
+                </div>
+            }
 
             <!-- Action Buttons -->
             <div class="modal-footer">
@@ -198,10 +194,13 @@
     private string modalTitle = "Add Debt";
 
     private string filterDescription = string.Empty;
-    private string filterType = string.Empty;
     private string filterCategory = string.Empty;
     private DateTime? filterStartDate = null;
     private DateTime? filterEndDate = null;
+
+    private bool showTopDebts = false;
+    private string topDebtsTitle = string.Empty;
+    private List<DebtRecord> topDebts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -214,7 +213,6 @@
         filteredDebts = debts
             .Where(d =>
                 (string.IsNullOrEmpty(filterDescription) || d.Description.Contains(filterDescription, StringComparison.OrdinalIgnoreCase)) &&
-                (string.IsNullOrEmpty(filterType) || d.Type == filterType) &&
                 (string.IsNullOrEmpty(filterCategory) || d.Category.Contains(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
                 (!filterStartDate.HasValue || d.DueDate >= filterStartDate.Value) &&
                 (!filterEndDate.HasValue || d.DueDate <= filterEndDate.Value))
@@ -224,7 +222,6 @@
     private async Task ClearFilters()
     {
         filterDescription = string.Empty;
-        filterType = string.Empty;
         filterCategory = string.Empty;
         filterStartDate = null;
         filterEndDate = null;
@@ -235,7 +232,7 @@
 
     private void OpenDebtModal()
     {
-        currentDebt = new DebtRecord { DueDate = DateTime.Now, IsPaid = false }; // Set IsPaid to false by default
+        currentDebt = new DebtRecord { DueDate = DateTime.Now, IsPaid = false };
         modalTitle = "Add Debt";
         showDebtModal = true;
     }
@@ -247,10 +244,8 @@
                 Id = debt.Id,
                 Description = debt.Description,
                 Amount = debt.Amount,
-                Type = debt.Type,
                 Category = debt.Category,
-                DueDate = debt.DueDate,
-                IsPaid = debt.IsPaid // Ensure IsPaid is properly initialized
+                DueDate = debt.DueDate
             };
         modalTitle = "Edit Debt";
         showDebtModal = true;
@@ -269,8 +264,25 @@
         }
 
         debts = await debtService.GetAllDebtsAsync();
-        ApplyFilters();
-        showDebtModal = false;
+        filteredDebts = new List<DebtRecord>(debts);
+        CloseDebtModal();
+    }
+
+    private async Task DeleteDebt(DebtRecord debt)
+    {
+        await debtService.DeleteDebtAsync(debt.Id);
+
+        debts = await debtService.GetAllDebtsAsync();
+        filteredDebts = new List<DebtRecord>(debts);
+    }
+
+    private async Task TogglePaidStatus(DebtRecord debt)
+    {
+        debt.IsPaid = !debt.IsPaid;
+        await debtService.EditDebtAsync(debt);
+
+        debts = await debtService.GetAllDebtsAsync();
+        filteredDebts = new List<DebtRecord>(debts);
     }
 
     private void CloseDebtModal()
@@ -278,10 +290,19 @@
         showDebtModal = false;
     }
 
-    private async Task DeleteDebt(DebtRecord debt)
+    private void ToggleHighestDebts()
     {
-        await debtService.DeleteDebtAsync(debt.Id);
-        debts = await debtService.GetAllDebtsAsync();
-        ApplyFilters();
+        showTopDebts = true;
+        topDebtsTitle = "Highest Debts";
+        topDebts = debts.OrderByDescending(d => d.Amount).Take(5).ToList();
+        filteredDebts = topDebts;
+    }
+
+    private void ToggleLowestDebts()
+    {
+        showTopDebts = true;
+        topDebtsTitle = "Lowest Debts";
+        topDebts = debts.OrderBy(d => d.Amount).Take(5).ToList();
+        filteredDebts = topDebts;
     }
 }
