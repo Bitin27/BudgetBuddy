@@ -1,0 +1,83 @@
+﻿/* General Login Box Styling */
+.login-container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 30px;
+    border-radius: 15px;
+    background-color: #f5f3ff; /* Soft lavender background */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0dff5;
+    text-align: center;
+}
+
+/* Logo-like Title Styling */
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: #4527a0; /* Dark purple */
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+    .logo span {
+        color: #5e35b1; /* Purple shade */
+    }
+
+/* Header Styling */
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #5e35b1; /* Purple text for header */
+}
+
+/* Form Group Styling */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+    .form-group label {
+        font-weight: 600;
+        color: #4527a0;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+/* Text Input Styling */
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+    /* Text Field Focus Effect */
+    .form-control:focus {
+        box-shadow: 0 0 8px rgba(94, 53, 177, 0.6);
+        border-color: #5e35b1;
+    }
+
+/* Dropdown Styling */
+.currency-dropdown {
+    background-color: #f9f7ff;
+}
+
+/* Button Styling */
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background-color: #5e35b1;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+    /* Button Hover Effect */
+    .btn-primary:hover {
+        background-color: #4527a0;
+    }

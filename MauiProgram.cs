@@ -21,6 +21,7 @@ namespace BudgetBuddy
     		builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Services.AddScoped<TransactionService>();
             builder.Services.AddScoped<DebtService>();
+            builder.Services.AddScoped<AuthState>();
 
 
             builder.Logging.AddDebug();

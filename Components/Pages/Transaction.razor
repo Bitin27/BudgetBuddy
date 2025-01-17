@@ -85,33 +85,14 @@
     .filter-container {
         gap: 15px;
     }
-
-    .stats-container {
-        display: flex;
-        gap: 10px;
-    }
-
-    .stat-card {
-        background: #f8f9fa;
-        padding: 10px 20px;
-        border-radius: 8px;
-        text-align: center;
-        width: 200px;
-    }
-
 </style>
 
-<h1>Transaction</h1>
+<h1>Transaction Management</h1>
 
 <div class="dashboard-header">
     <div class="buttons-container">
         <button class="btn btn-primary" @onclick="OpenAddModal">Add Transaction</button>
         <button class="btn btn-secondary" @onclick="OpenCategoryModal">Add Category</button>
-    </div>
-
-    <div class="stats-container">
-        <button class="btn btn-info" @onclick="ToggleHighestTransactions">Highest Transaction</button>
-        <button class="btn btn-info" @onclick="ToggleLowestTransactions">Lowest Transaction</button>
     </div>
 </div>
 
@@ -134,70 +115,40 @@
     <input type="date" class="form-control" @bind="endDate" />
     <button class="btn btn-primary" @onclick="FilterTransactions">Filter</button>
     <button class="btn btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+    <button class="btn btn-warning" @onclick="SortByOldestToNewest">Sort by Date (Oldest to Newest)</button>
+    <button class="btn btn-warning" @onclick="SortByNewestToOldest">Sort by Date (Newest to Oldest)</button>
 </div>
 
-@if (showTopTransactions)
-{
-    <h3>@topTransactionsTitle</h3>
-    <table class="table transaction-table">
-        <thead>
+<table class="table transaction-table">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th>Notes</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var transaction in filteredTransactions)
+        {
             <tr>
-                <th>Description</th>
-                <th>Notes</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Type</th>
-                <th>Category</th>
+                <td>@transaction.Description</td>
+                <td>@transaction.Notes</td>
+                <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
+                <td>@transaction.Amount.ToString("C")</td>
+                <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
+                <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
+                <td class="transaction-actions">
+                    <button class="btn btn-warning" @onclick="() => OpenEditModal(transaction)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteTransaction(transaction)">Delete</button>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach (var transaction in topTransactions)
-            {
-                <tr>
-                    <td>@transaction.Description</td>
-                    <td>@transaction.Notes</td>
-                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td> <!-- Format the date -->
-                    <td>@transaction.Amount.ToString("C")</td>
-                    <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
-                    <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-else
-{
-    <table class="table transaction-table">
-        <thead>
-            <tr>
-                <th>Description</th>
-                <th>Notes</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var transaction in filteredTransactions)
-            {
-                <tr>
-                    <td>@transaction.Description</td>
-                    <td>@transaction.Notes</td>
-                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td> <!-- Format the date -->
-                    <td>@transaction.Amount.ToString("C")</td>
-                    <td class="@(transaction.Type == "Income" ? "text-success" : "text-danger")">@transaction.Type</td>
-                    <td>@(string.IsNullOrEmpty(transaction.Category) ? "Uncategorized" : transaction.Category)</td>
-                    <td class="transaction-actions">
-                        <button class="btn btn-warning" @onclick="() => OpenEditModal(transaction)">Edit</button>
-                        <button class="btn btn-danger" @onclick="() => DeleteTransaction(transaction)">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+        }
+    </tbody>
+</table>
 
 @if (showTransactionModal)
 {
@@ -229,7 +180,7 @@ else
                 </select>
             </div>
             <div>
-                <label>Category Tag:</label>
+                <label>Category:</label>
                 <select class="form-control" @bind="transactionModel.Category">
                     <option value="">Select Category</option>
                     @foreach (var category in database.Categories)
@@ -276,9 +227,6 @@ else
     private DateTime endDate = DateTime.MaxValue;
     private string descriptionFilter = string.Empty;
     private List<FinancialTransaction> filteredTransactions = new();
-    private bool showTopTransactions = false;
-    private string topTransactionsTitle = string.Empty;
-    private List<FinancialTransaction> topTransactions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -286,38 +234,14 @@ else
         filteredTransactions = database.Transactions;
     }
 
-    private void ToggleHighestTransactions()
+    private void SortByOldestToNewest()
     {
-        if (showTopTransactions)
-        {
-            showTopTransactions = false;
-        }
-        else
-        {
-            topTransactions = database.Transactions
-                .OrderByDescending(t => t.Amount)
-                .Take(5)
-                .ToList();
-            topTransactionsTitle = "Top 5 Highest Transactions";
-            showTopTransactions = true;
-        }
+        filteredTransactions = filteredTransactions.OrderBy(t => t.Date).ToList();
     }
 
-    private void ToggleLowestTransactions()
+    private void SortByNewestToOldest()
     {
-        if (showTopTransactions)
-        {
-            showTopTransactions = false;
-        }
-        else
-        {
-            topTransactions = database.Transactions
-                .OrderBy(t => t.Amount)
-                .Take(5)
-                .ToList();
-            topTransactionsTitle = "Top 5 Lowest Transactions";
-            showTopTransactions = true;
-        }
+        filteredTransactions = filteredTransactions.OrderByDescending(t => t.Date).ToList();
     }
 
     private void OpenAddModal()
@@ -385,10 +309,9 @@ else
     {
         filteredTransactions = database.Transactions
             .Where(t => (string.IsNullOrEmpty(descriptionFilter) || t.Description.Contains(descriptionFilter, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(selectedType) || t.Type.Equals(selectedType, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(selectedCategory) || (t.Category != null && t.Category.Equals(selectedCategory, StringComparison.OrdinalIgnoreCase))) &&
-                        (startDate == DateTime.MinValue || t.Date >= startDate) && // Filter if startDate is set
-                        (endDate == DateTime.MaxValue || t.Date <= endDate)) // Filter if endDate is set
+                        (string.IsNullOrEmpty(selectedType) || t.Type == selectedType) &&
+                        (string.IsNullOrEmpty(selectedCategory) || t.Category == selectedCategory) &&
+                        (t.Date >= startDate && t.Date <= endDate))
             .ToList();
     }
 
@@ -399,12 +322,11 @@ else
         selectedCategory = string.Empty;
         startDate = DateTime.MinValue;
         endDate = DateTime.MaxValue;
-        FilterTransactions();
+        filteredTransactions = database.Transactions;
     }
 
     private void OpenCategoryModal()
     {
-        newCategory = string.Empty;
         showCategoryModal = true;
     }
 
@@ -415,12 +337,12 @@ else
 
     private async Task AddCategory()
     {
-        if (!string.IsNullOrWhiteSpace(newCategory) && !database.Categories.Contains(newCategory))
+        if (!string.IsNullOrEmpty(newCategory) && !database.Categories.Contains(newCategory))
         {
             database.Categories.Add(newCategory);
             await TransactionDatabase.SaveDatabaseAsync(database);
+            newCategory = string.Empty;
+            CloseCategoryModal();
         }
-
-        CloseCategoryModal();
     }
 }
